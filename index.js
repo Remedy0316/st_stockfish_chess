@@ -969,15 +969,6 @@ jQuery(async () => {
         togglePanel();
     });
 
-    // Also add a quick button in the form area
-    const quickButton = jQuery(`
-        <div id="chess-quick-button" class="list-group-item" title="Toggle Chess">
-            <span class="fa-solid fa-chess"></span>
-        </div>
-    `);
-    jQuery('#data_bank_wand_container, #form_sheld, #leftSendForm').first().prepend(quickButton);
-    quickButton.on('click', () => togglePanel());
-
     // Listen for chat changes to restore game state
     const { eventSource, event_types } = SillyTavern.getContext();
     eventSource.on(event_types.CHAT_CHANGED, async () => {
