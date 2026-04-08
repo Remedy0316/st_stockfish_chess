@@ -31,6 +31,7 @@ let engine = null;
 let panelOpen = false;
 let gameActive = false;
 let isEngineThinking = false;
+let playerResigned = false;
 let moveHistory = [];
 let extensionPath = '';
 
@@ -276,6 +277,7 @@ async function startNewGame() {
     moveHistory = [];
     gameActive = true;
     isEngineThinking = false;
+    playerResigned = false;
 
     // Initialize board
     if (board) {
@@ -483,7 +485,6 @@ async function engineMove() {
 }
 
 async function handleGameOver() {
-    gameActive = false;
     board.setEnabled(false);
 
     const meta = getMetadata();
@@ -500,6 +501,9 @@ async function handleGameOver() {
         await sendSystemUserMessage(`*${status}*`);
         await triggerLLMResponse(null, true);
     }
+
+    // Set gameActive false AFTER generation so the interceptor can inject chess context
+    gameActive = false;
 }
 
 async function takeBack() {
@@ -536,8 +540,8 @@ async function resignGame() {
     const confirmed = await ctx.Popup.show.confirm('Resign', 'Are you sure you want to resign?');
     if (!confirmed) return;
 
-    gameActive = false;
     board.setEnabled(false);
+    playerResigned = true;
     updateStatusUI('You resigned');
 
     const meta = getMetadata();
@@ -550,6 +554,9 @@ async function resignGame() {
         await sendSystemUserMessage('*{{user}} resigns the game.*');
         await triggerLLMResponse(null, true, 'resigned');
     }
+
+    // Set gameActive false AFTER generation so the interceptor can inject chess context
+    gameActive = false;
 }
 
 function flipBoard() {
@@ -664,7 +671,7 @@ function updateEvalBar(eval_) {
 
 // --- LLM Integration ---
 
-function buildChessContext(lastMove, isGameOver, resignType) {
+function buildChessContext(lastMove, isGameOver) {
     if (!game) return '';
 
     const settings = getSettings();
@@ -678,7 +685,7 @@ function buildChessContext(lastMove, isGameOver, resignType) {
     const lastEngineMove = moveHistory.findLast(m => m.color === engineColor);
 
     let gameStatus;
-    if (resignType === 'resigned') {
+    if (playerResigned) {
         gameStatus = `{{user}} (${playerColorName}) has resigned. You win!`;
     } else if (game.isCheckmate()) {
         const winner = game.turn() === settings.playerColor ? engineColorName : playerColorName;
@@ -720,32 +727,20 @@ async function triggerLLMResponse(lastMove, isGameOver = false, resignType = nul
     const ctx = SillyTavern.getContext();
     if (!ctx.characterId && ctx.characterId !== 0) return;
 
-    const chessContext = buildChessContext(lastMove, isGameOver, resignType);
-    if (!chessContext) return;
+    // For engine moves (not game over/resign which already sent a user message),
+    // narrate the engine's move as a user message so the LLM has something to respond to
+    if (lastMove && !isGameOver && !resignType) {
+        const pieceName = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+        const piece = pieceName[lastMove.piece] || 'piece';
+        const action = lastMove.captured ? 'captures on' : 'plays';
+        const charName = ctx.characters[ctx.characterId]?.name || 'Opponent';
+        await sendSystemUserMessage(`*${charName}'s ${piece} ${action} ${lastMove.to}*`);
+    }
 
     try {
-        const result = await ctx.generateQuietPrompt({
-            quietPrompt: chessContext,
-        });
-
-        if (result) {
-            // Send the result as a character message
-            const messageText = result.trim();
-            if (messageText) {
-                const msg = {
-                    is_user: false,
-                    name: ctx.characters[ctx.characterId]?.name || 'Character',
-                    mes: messageText,
-                    send_date: ctx.humanizedDateTime(),
-                    extra: { isChessResponse: true },
-                };
-                ctx.chat.push(msg);
-                await ctx.saveChat();
-
-                // Render the new message
-                ctx.addOneMessage(msg);
-            }
-        }
+        // Use normal generation so the response streams naturally in the UI.
+        // The generate_interceptor injects chess game state into the prompt automatically.
+        await ctx.generate('normal');
     } catch (err) {
         console.error('[Chess Extension] Failed to trigger LLM response:', err);
     }
@@ -756,7 +751,7 @@ async function sendSystemUserMessage(text) {
     const msg = {
         is_user: true,
         name: ctx.name1 || 'User',
-        mes: text,
+        mes: ctx.substituteParams(text),
         send_date: ctx.humanizedDateTime(),
         extra: { isChessMove: true },
     };
@@ -782,7 +777,7 @@ async function sendMoveToChat(move, source) {
         const msg = {
             is_user: true,
             name: ctx.name1 || 'User',
-            mes: text,
+            mes: ctx.substituteParams(text),
             send_date: ctx.humanizedDateTime(),
             extra: { isChessMove: true },
         };
@@ -796,7 +791,6 @@ async function sendMoveToChat(move, source) {
 
 globalThis.chessExtensionInterceptor = async function (chat, contextSize, abort, type) {
     if (!game || !gameActive) return;
-    if (type === 'quiet') return; // Don't double-inject on quiet prompts
 
     const chessContext = buildChessContext(
         moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null,
