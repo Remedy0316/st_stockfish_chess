@@ -496,6 +496,8 @@ async function handleGameOver() {
     // Always trigger LLM response on game over
     const settings = getSettings();
     if (settings.chatVerbosity !== 'silent') {
+        const status = getGameStatus(game);
+        await sendSystemUserMessage(`*${status}*`);
         await triggerLLMResponse(null, true);
     }
 }
@@ -545,6 +547,7 @@ async function resignGame() {
 
     const settings = getSettings();
     if (settings.chatVerbosity !== 'silent') {
+        await sendSystemUserMessage('*{{user}} resigns the game.*');
         await triggerLLMResponse(null, true, 'resigned');
     }
 }
@@ -676,7 +679,7 @@ function buildChessContext(lastMove, isGameOver, resignType) {
 
     let gameStatus;
     if (resignType === 'resigned') {
-        gameStatus = `The player (${playerColorName}) has resigned. You win!`;
+        gameStatus = `{{user}} (${playerColorName}) has resigned. You win!`;
     } else if (game.isCheckmate()) {
         const winner = game.turn() === settings.playerColor ? engineColorName : playerColorName;
         const loser = game.turn() === settings.playerColor ? playerColorName : engineColorName;
@@ -700,11 +703,11 @@ function buildChessContext(lastMove, isGameOver, resignType) {
     }
 
     return `[Chess Game State]
-You are playing a chess game against the user.
+You are playing a chess game against {{user}}.
 You are playing as: ${engineColorName}
 Current position (FEN): ${game.fen()}
 Move number: ${moveNum}
-User's last move: ${lastPlayerMove ? lastPlayerMove.san : 'None'} ${lastPlayerMove === lastMove ? captureNote : ''}
+{{user}}'s last move: ${lastPlayerMove ? lastPlayerMove.san : 'None'} ${lastPlayerMove === lastMove ? captureNote : ''}
 Your last move: ${lastEngineMove ? lastEngineMove.san : 'None'} ${lastEngineMove === lastMove ? captureNote : ''}
 Material balance: ${getMaterialBalance(game)}
 Position evaluation: ${evalDesc}
@@ -748,17 +751,31 @@ async function triggerLLMResponse(lastMove, isGameOver = false, resignType = nul
     }
 }
 
+async function sendSystemUserMessage(text) {
+    const ctx = SillyTavern.getContext();
+    const msg = {
+        is_user: true,
+        name: ctx.name1 || 'User',
+        mes: text,
+        send_date: ctx.humanizedDateTime(),
+        extra: { isChessMove: true },
+    };
+    ctx.chat.push(msg);
+    await ctx.saveChat();
+    ctx.addOneMessage(msg);
+}
+
 async function sendMoveToChat(move, source) {
     const settings = getSettings();
     if (!settings.showMoveInChat) return;
 
     const ctx = SillyTavern.getContext();
-    const label = source === 'player' ? 'You' : (ctx.characters[ctx.characterId]?.name || 'Opponent');
 
-    const pieceName = { p: '', n: 'knight ', b: 'bishop ', r: 'rook ', q: 'queen ', k: 'king ' };
-    const pieceStr = pieceName[move.piece] || '';
+    const pieceName = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const piece = pieceName[move.piece] || 'piece';
     const action = move.captured ? 'captures on' : 'moves to';
-    const text = `*${label} ${pieceStr}${action} ${move.to}${move.promotion ? ` (promotes to ${pieceName[move.promotion]?.trim() || move.promotion})` : ''}*`;
+    const label = source === 'player' ? '{{user}}' : (ctx.characters[ctx.characterId]?.name || 'Opponent');
+    const text = `*${label}'s ${piece} ${action} ${move.to}${move.promotion ? ` (promotes to ${pieceName[move.promotion] || move.promotion})` : ''}*`;
 
     // Only send the player's move as a user message
     if (source === 'player') {

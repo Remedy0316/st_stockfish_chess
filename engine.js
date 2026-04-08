@@ -182,7 +182,7 @@ export class StockfishEngine {
             if (value > 0) {
                 description = `Mate in ${value} for the engine`;
             } else if (value < 0) {
-                description = `Mate in ${Math.abs(value)} for the player`;
+                description = `Mate in ${Math.abs(value)} for {{user}}`;
             } else {
                 description = 'Checkmate';
             }
@@ -191,11 +191,11 @@ export class StockfishEngine {
             const cp = value;
             if (Math.abs(cp) < 25) description = 'Equal';
             else if (cp > 0 && cp < 100) description = 'Slightly better for the engine';
-            else if (cp < 0 && cp > -100) description = 'Slightly better for the player';
+            else if (cp < 0 && cp > -100) description = 'Slightly better for {{user}}';
             else if (cp >= 100 && cp < 300) description = 'Better for the engine';
-            else if (cp <= -100 && cp > -300) description = 'Better for the player';
+            else if (cp <= -100 && cp > -300) description = 'Better for {{user}}';
             else if (cp >= 300) description = 'The engine has a winning advantage';
-            else description = 'The player has a winning advantage';
+            else description = '{{user}} has a winning advantage';
         }
 
         this.lastEval = { type, value, description };
