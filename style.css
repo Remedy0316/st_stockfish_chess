@@ -315,6 +315,11 @@
     border: 1px solid var(--SmartThemeBorderColor, #444);
 }
 
+.chess-settings-row .menu_button {
+    width: 100%;
+    white-space: nowrap;
+}
+
 /* === Scrollbar === */
 .chess-move-history::-webkit-scrollbar,
 .chess-panel-body::-webkit-scrollbar {
