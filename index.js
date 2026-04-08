@@ -804,6 +804,7 @@ globalThis.chessExtensionInterceptor = async function (chat, contextSize, abort,
             name: 'Chess Game',
             mes: chessContext,
             is_system: true,
+            role: 'system',
             extra: { type: 'chess_context' },
         };
         // Insert near the end so it's in context
