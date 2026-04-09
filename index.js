@@ -308,16 +308,21 @@ function makeDraggable(el, handle) {
 async function togglePanel() {
     try {
         console.log('[Chess Extension] togglePanel called');
-        toastr.info('Opening chess panel...', '', { timeOut: 2000 });
         const panel = document.getElementById('chess-extension-panel');
         const floatBtn = document.getElementById('chess-floating-btn');
         if (!panel) {
             console.log('[Chess Extension] No panel found, creating...');
             createPanel();
+            const createdPanel = document.getElementById('chess-extension-panel');
+            if (createdPanel) {
+                console.log('[Chess Extension] Panel created successfully, dimensions:', createdPanel.offsetWidth, createdPanel.offsetHeight);
+                toastr.success('Panel created: ' + createdPanel.offsetWidth + 'x' + createdPanel.offsetHeight, '', { timeOut: 3000 });
+            } else {
+                toastr.error('Panel element not found after createPanel()');
+                return;
+            }
             panelOpen = true;
-            console.log('[Chess Extension] Panel created, panelOpen =', panelOpen);
             if (!gameActive) {
-                // Don't let engine init failure prevent panel from showing
                 startNewGame().catch(err => {
                     console.error('[Chess Extension] startNewGame failed:', err);
                     toastr.error('Chess engine failed to start. Try clicking New Game.');
