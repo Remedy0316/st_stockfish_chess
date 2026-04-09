@@ -161,6 +161,22 @@ function isKeyMoment(moveObj, chessGame) {
     return false;
 }
 
+function formatPlayerMove(move) {
+    const pieceName = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const piece = pieceName[move.piece] || 'piece';
+    const action = move.captured ? 'captures on' : 'moves to';
+    const promo = move.promotion ? ` (promotes to ${pieceName[move.promotion] || move.promotion})` : '';
+    return `{{user}}'s ${piece} ${action} ${move.to}${promo}`;
+}
+
+function formatEngineMove(move) {
+    const pieceName = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const piece = pieceName[move.piece] || 'piece';
+    const action = move.captured ? 'captures on' : 'plays';
+    const promo = move.promotion ? ` (promotes to ${pieceName[move.promotion] || move.promotion})` : '';
+    return `{{char}}'s ${piece} ${action} ${move.to}${promo}`;
+}
+
 // --- Extension Path Detection ---
 
 function detectExtensionPath() {
@@ -612,19 +628,14 @@ async function handleBoardEvent(event) {
                 meta.moveHistory = moveHistory.map(m => m.san);
                 await saveMetadata();
 
-                // Send player move to chat
-                if (settings.showMoveInChat && settings.chatVerbosity !== 'silent') {
-                    await sendMoveToChat(move, 'player');
-                }
-
                 // Check game over
                 if (game.isGameOver()) {
-                    await handleGameOver();
+                    await handleGameOver(move);
                     return;
                 }
 
                 // Engine's turn
-                await engineMove();
+                await engineMove(move);
             }
         } catch (e) {
             // Invalid move - flash the board or something
@@ -636,7 +647,7 @@ async function handleBoardEvent(event) {
     }
 }
 
-async function engineMove() {
+async function engineMove(playerMove) {
     if (!engine || !game || game.isGameOver()) return;
 
     const settings = getSettings();
@@ -652,6 +663,10 @@ async function engineMove() {
 
         if (!bestMoveUCI || bestMoveUCI === '(none)') {
             console.warn('[Chess Extension] Engine returned no move');
+            // Send player's move alone since engine couldn't respond
+            if (playerMove && settings.showMoveInChat) {
+                await sendSystemUserMessage(`*${formatPlayerMove(playerMove)}.*`);
+            }
             isEngineThinking = false;
             board.setEnabled(true);
             return;
@@ -682,18 +697,26 @@ async function engineMove() {
             meta.moveHistory = moveHistory.map(m => m.san);
             await saveMetadata();
 
-            // Send engine move to chat & trigger LLM response
+            // Send combined player + engine move to chat
+            if (settings.showMoveInChat) {
+                const msg = playerMove
+                    ? `*${formatPlayerMove(playerMove)}, ${formatEngineMove(move)}.*`
+                    : `*${formatEngineMove(move)}.*`;
+                await sendSystemUserMessage(msg);
+            }
+
+            // Check game over
+            if (game.isGameOver()) {
+                await handleGameOver(null);
+                return;
+            }
+
+            // Trigger LLM based on verbosity
             const shouldChat = settings.chatVerbosity === 'every' ||
                 (settings.chatVerbosity === 'key' && isKeyMoment(move, game));
 
             if (shouldChat) {
                 await triggerLLMResponse(move);
-            }
-
-            // Check game over
-            if (game.isGameOver()) {
-                await handleGameOver();
-                return;
             }
         }
     } catch (err) {
@@ -705,7 +728,7 @@ async function engineMove() {
     }
 }
 
-async function handleGameOver() {
+async function handleGameOver(playerMoveForChat) {
     board.setEnabled(false);
 
     const meta = getMetadata();
@@ -715,13 +738,16 @@ async function handleGameOver() {
 
     updateStatusUI();
 
-    // Always trigger LLM response on game over
+    // If game ended on player's move (no engine response), send player's move to chat
     const settings = getSettings();
-    if (settings.chatVerbosity !== 'silent') {
-        const status = getGameStatus(game);
-        await sendSystemUserMessage(`*${status}*`);
-        await triggerLLMResponse(null, true);
+    if (playerMoveForChat && settings.showMoveInChat) {
+        await sendSystemUserMessage(`*${formatPlayerMove(playerMoveForChat)}.*`);
     }
+
+    // Always send game status and trigger LLM on game over (regardless of verbosity)
+    const status = getGameStatus(game);
+    await sendSystemUserMessage(`*${status}*`);
+    await triggerLLMResponse(null, true);
 
     // Set gameActive false AFTER generation so the prompt injection has chess context
     gameActive = false;
@@ -771,11 +797,8 @@ async function resignGame() {
     meta.resigned = true;
     await saveMetadata();
 
-    const settings = getSettings();
-    if (settings.chatVerbosity !== 'silent') {
-        await sendSystemUserMessage('*{{user}} resigns the game.*');
-        await triggerLLMResponse(null, true, 'resigned');
-    }
+    await sendSystemUserMessage('*{{user}} resigns the game.*');
+    await triggerLLMResponse(null, true, 'resigned');
 
     // Set gameActive false AFTER generation so the prompt injection has chess context
     gameActive = false;
@@ -950,16 +973,6 @@ Respond in character. You may comment on the game, react emotionally, strategize
 async function triggerLLMResponse(lastMove, isGameOver = false, resignType = null) {
     const ctx = SillyTavern.getContext();
     if (!ctx.characterId && ctx.characterId !== 0) return;
-
-    // For engine moves (not game over/resign which already sent a user message),
-    // narrate the engine's move as a user message so the LLM has something to respond to
-    if (lastMove && !isGameOver && !resignType) {
-        const pieceName = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-        const piece = pieceName[lastMove.piece] || 'piece';
-        const action = lastMove.captured ? 'captures on' : 'plays';
-        const charName = ctx.characters[ctx.characterId]?.name || 'Opponent';
-        await sendSystemUserMessage(`*${charName}'s ${piece} ${action} ${lastMove.to}*`);
-    }
 
     try {
         // Inject chess game state as a system message via setExtensionPrompt
