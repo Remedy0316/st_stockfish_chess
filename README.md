@@ -41,6 +41,7 @@ Open **Extensions** → **Chess - Stockfish** settings to configure:
 - **Show evaluation bar** — Toggle the position evaluation display
 - **Move delay** — Artificial delay before engine moves (0-3000ms)
 - **Show moves in chat** — Toggle move messages in the chat
+- **Board size (desktop)** — Choose from Medium, Large, or Extra Large board presets. This adjusts the panel width, board dimensions, and piece size. Only applies on desktop (mobile uses its own responsive sizing)
 
 ## Panel Controls
 
