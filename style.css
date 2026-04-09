@@ -102,6 +102,7 @@
     border: 2px solid var(--SmartThemeBorderColor, #444);
     border-radius: 4px;
     overflow: hidden;
+    touch-action: none; /* Prevent browser gestures on the board (iOS Safari) */
 }
 
 .chess-square {
@@ -165,6 +166,9 @@
     z-index: 1;
     filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3));
     transition: transform 0.1s;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none; /* Prevent iOS callout menu on long press */
 }
 
 .chess-piece:active {

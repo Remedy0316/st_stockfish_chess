@@ -111,24 +111,35 @@ export class ChessBoard {
                         // Highlight this square as selected after a small delay
                         setTimeout(() => this._showLegalMoves(sq), 0);
                     });
-                    // Touch drag support (mobile Safari)
+                    // Touch support (mobile Safari)
                     pieceEl.addEventListener('touchstart', (e) => {
                         if (!this.enabled) return;
+                        e.preventDefault(); // Prevent text selection and delayed click
                         this._touchDragFrom = sq;
+                        this._touchMoved = false;
                         this._showLegalMoves(sq);
-                    }, { passive: true });
+                    });
+                    pieceEl.addEventListener('touchmove', (e) => {
+                        if (!this.enabled || !this._touchDragFrom) return;
+                        e.preventDefault(); // Prevent scrolling while dragging a piece
+                        this._touchMoved = true;
+                    });
                     pieceEl.addEventListener('touchend', (e) => {
                         if (!this.enabled || !this._touchDragFrom) return;
+                        e.preventDefault();
                         const touch = e.changedTouches[0];
                         const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
                         const targetCell = targetEl?.closest?.('[data-square]');
                         if (targetCell) {
                             const targetSq = targetCell.dataset.square;
                             if (this._touchDragFrom !== targetSq) {
+                                // Dragged to a different square — attempt the move
                                 this.selectedSquare = null;
                                 this.legalMoves = [];
                                 this.onMoveCallback({ from: this._touchDragFrom, to: targetSq });
                             }
+                            // If same square and not dragged, the piece stays selected
+                            // (selection was already done in touchstart via _showLegalMoves)
                         }
                         this._touchDragFrom = null;
                     });
