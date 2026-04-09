@@ -315,8 +315,14 @@ async function togglePanel() {
             createPanel();
             const createdPanel = document.getElementById('chess-extension-panel');
             if (createdPanel) {
-                console.log('[Chess Extension] Panel created successfully, dimensions:', createdPanel.offsetWidth, createdPanel.offsetHeight);
-                toastr.success('Panel created: ' + createdPanel.offsetWidth + 'x' + createdPanel.offsetHeight, '', { timeOut: 3000 });
+                // Force visibility on mobile via inline styles
+                if (window.innerWidth <= 600) {
+                    createdPanel.style.cssText += '; position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; top:auto !important; width:100% !important; display:flex !important; visibility:visible !important; opacity:1 !important;';
+                }
+                const rect = createdPanel.getBoundingClientRect();
+                const msg = `Panel: ${rect.width.toFixed(0)}x${rect.height.toFixed(0)} at (${rect.left.toFixed(0)},${rect.top.toFixed(0)}) viewport: ${window.innerWidth}x${window.innerHeight}`;
+                console.log('[Chess Extension]', msg);
+                toastr.success(msg, '', { timeOut: 5000 });
             } else {
                 toastr.error('Panel element not found after createPanel()');
                 return;
@@ -333,6 +339,9 @@ async function togglePanel() {
 
         panelOpen = !panelOpen;
         panel.style.display = panelOpen ? '' : 'none';
+        if (panelOpen && window.innerWidth <= 600) {
+            panel.style.cssText += '; position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; top:auto !important; width:100% !important; display:flex !important; visibility:visible !important; opacity:1 !important;';
+        }
         // Hide floating button when panel is fully closed
         if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
         if (!panelOpen) clearChessPrompt();
