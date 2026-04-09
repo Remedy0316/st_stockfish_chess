@@ -302,6 +302,13 @@
     font-size: 13px;
 }
 
+.chess-settings-row label.chess-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
 .chess-settings-row input[type="range"] {
     width: 100%;
 }

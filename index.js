@@ -902,7 +902,7 @@ async function createSettingsPanel() {
                     </select>
                 </div>
                 <div class="chess-settings-row">
-                    <label for="chess_show_eval">
+                    <label for="chess_show_eval" class="chess-checkbox-label">
                         <input id="chess_show_eval" type="checkbox" ${settings.showEvaluation ? 'checked' : ''} />
                         Show evaluation bar
                     </label>
@@ -912,7 +912,7 @@ async function createSettingsPanel() {
                     <input id="chess_move_delay" type="range" min="0" max="3000" step="100" value="${settings.moveDelay}" />
                 </div>
                 <div class="chess-settings-row">
-                    <label for="chess_show_move_chat">
+                    <label for="chess_show_move_chat" class="chess-checkbox-label">
                         <input id="chess_show_move_chat" type="checkbox" ${settings.showMoveInChat ? 'checked' : ''} />
                         Show moves in chat
                     </label>
