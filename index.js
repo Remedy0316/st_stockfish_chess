@@ -234,8 +234,56 @@ function createFloatingButton() {
     btn.title = 'Restore Chess Panel';
     btn.textContent = '♟';
     btn.style.display = 'none';
-    btn.addEventListener('click', restoreFromFloat);
+    makeFloatingBtnDraggable(btn);
     document.body.appendChild(btn);
+}
+
+/**
+ * Make the floating button draggable (mouse + touch).
+ * A short drag distance is treated as a click (restore panel).
+ */
+function makeFloatingBtnDraggable(btn) {
+    let offsetX = 0, offsetY = 0, isDragging = false, hasMoved = false;
+    let startX = 0, startY = 0;
+    const DRAG_THRESHOLD = 6;
+
+    function onStart(clientX, clientY) {
+        isDragging = true;
+        hasMoved = false;
+        startX = clientX;
+        startY = clientY;
+        offsetX = clientX - btn.offsetLeft;
+        offsetY = clientY - btn.offsetTop;
+        btn.style.transition = 'none';
+    }
+
+    function onMove(clientX, clientY) {
+        if (!isDragging) return;
+        if (!hasMoved && Math.abs(clientX - startX) < DRAG_THRESHOLD && Math.abs(clientY - startY) < DRAG_THRESHOLD) return;
+        hasMoved = true;
+        const x = Math.max(0, Math.min(window.innerWidth - btn.offsetWidth, clientX - offsetX));
+        const y = Math.max(0, Math.min(window.innerHeight - btn.offsetHeight, clientY - offsetY));
+        btn.style.left = x + 'px';
+        btn.style.top = y + 'px';
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+    }
+
+    function onEnd() {
+        if (isDragging && !hasMoved) {
+            restoreFromFloat();
+        }
+        isDragging = false;
+        btn.style.transition = '';
+    }
+
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); onStart(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+    document.addEventListener('mouseup', () => onEnd());
+
+    btn.addEventListener('touchstart', (e) => { onStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    document.addEventListener('touchmove', (e) => { if (isDragging) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    document.addEventListener('touchend', () => onEnd());
 }
 
 function minimizeToFloat() {
