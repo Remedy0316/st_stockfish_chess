@@ -401,4 +401,18 @@
         bottom: 70px;
         right: 12px;
     }
+
+    .chess-icon-btn {
+        font-size: 22px;
+        padding: 6px 12px;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chess-panel-controls {
+        gap: 12px;
+    }
 }

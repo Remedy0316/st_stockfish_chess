@@ -242,7 +242,10 @@ function minimizeToFloat() {
     const panel = document.getElementById('chess-extension-panel');
     const floatBtn = document.getElementById('chess-floating-btn');
     if (panel) panel.style.display = 'none';
-    if (floatBtn) floatBtn.style.display = '';
+    if (floatBtn) {
+        floatBtn.style.display = '';
+        applyMobileFloatPosition(floatBtn);
+    }
 }
 
 function restoreFromFloat() {
@@ -381,6 +384,25 @@ function applyMobilePosition(panel) {
 
     panel.style.setProperty('top', cssTop + 'px', 'important');
     console.log('[Chess Extension] Mobile position: transformOffset=' + transformOffset + ' cssTop=' + cssTop + ' panelH=' + panelHeight + ' viewport=' + window.innerHeight);
+}
+
+/**
+ * Same transform compensation for the floating minimize button.
+ */
+function applyMobileFloatPosition(btn) {
+    if (window.innerWidth > 600) return;
+
+    btn.style.setProperty('position', 'fixed', 'important');
+    btn.style.setProperty('top', '0px', 'important');
+    btn.style.setProperty('bottom', 'auto', 'important');
+
+    const transformOffset = btn.getBoundingClientRect().top;
+    const desiredViewportTop = window.innerHeight - 130; // 130px from bottom
+    const cssTop = desiredViewportTop - transformOffset;
+
+    btn.style.setProperty('top', cssTop + 'px', 'important');
+    btn.style.setProperty('bottom', 'auto', 'important');
+    btn.style.setProperty('right', '12px', 'important');
 }
 
 // --- Game Logic ---
