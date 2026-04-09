@@ -248,7 +248,10 @@ function minimizeToFloat() {
 function restoreFromFloat() {
     const panel = document.getElementById('chess-extension-panel');
     const floatBtn = document.getElementById('chess-floating-btn');
-    if (panel) panel.style.display = '';
+    if (panel) {
+        panel.style.display = '';
+        applyMobilePosition(panel);
+    }
     if (floatBtn) floatBtn.style.display = 'none';
 }
 
@@ -311,22 +314,13 @@ async function togglePanel() {
         const panel = document.getElementById('chess-extension-panel');
         const floatBtn = document.getElementById('chess-floating-btn');
         if (!panel) {
-            console.log('[Chess Extension] No panel found, creating...');
             createPanel();
             const createdPanel = document.getElementById('chess-extension-panel');
-            if (createdPanel) {
-                // Force visibility on mobile via inline styles
-                if (window.innerWidth <= 600) {
-                    createdPanel.style.cssText += '; position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; top:auto !important; width:100% !important; display:flex !important; visibility:visible !important; opacity:1 !important;';
-                }
-                const rect = createdPanel.getBoundingClientRect();
-                const msg = `Panel: ${rect.width.toFixed(0)}x${rect.height.toFixed(0)} at (${rect.left.toFixed(0)},${rect.top.toFixed(0)}) viewport: ${window.innerWidth}x${window.innerHeight}`;
-                console.log('[Chess Extension]', msg);
-                toastr.success(msg, '', { timeOut: 5000 });
-            } else {
-                toastr.error('Panel element not found after createPanel()');
+            if (!createdPanel) {
+                toastr.error('Failed to create chess panel');
                 return;
             }
+            applyMobilePosition(createdPanel);
             panelOpen = true;
             if (!gameActive) {
                 startNewGame().catch(err => {
@@ -339,9 +333,7 @@ async function togglePanel() {
 
         panelOpen = !panelOpen;
         panel.style.display = panelOpen ? '' : 'none';
-        if (panelOpen && window.innerWidth <= 600) {
-            panel.style.cssText += '; position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; top:auto !important; width:100% !important; display:flex !important; visibility:visible !important; opacity:1 !important;';
-        }
+        if (panelOpen) applyMobilePosition(panel);
         // Hide floating button when panel is fully closed
         if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
         if (!panelOpen) clearChessPrompt();
@@ -356,6 +348,30 @@ async function togglePanel() {
         console.error('[Chess Extension] togglePanel error:', err);
         toastr.error('Chess panel error: ' + err.message);
     }
+}
+
+/**
+ * On mobile, position: fixed can break if an ancestor has a CSS transform.
+ * iOS Safari treats fixed elements as absolute in that case.
+ * Work around by calculating explicit top/left from the viewport.
+ */
+function applyMobilePosition(panel) {
+    if (window.innerWidth > 600) return;
+
+    const maxH = Math.round(window.innerHeight * 0.75);
+    // Get the offset between viewport and the panel's offsetParent
+    // to compensate for any ancestor transforms
+    const testTop = panel.getBoundingClientRect().top - (parseFloat(panel.style.top) || 0);
+
+    panel.style.position = 'fixed';
+    panel.style.left = '0px';
+    panel.style.right = '0px';
+    panel.style.width = '100%';
+    panel.style.maxHeight = maxH + 'px';
+    panel.style.bottom = 'auto';
+    // Place panel at the bottom of the actual viewport by compensating for transform offset
+    const desiredTop = window.innerHeight - Math.min(panel.offsetHeight, maxH);
+    panel.style.top = (desiredTop - testTop) + 'px';
 }
 
 // --- Game Logic ---
