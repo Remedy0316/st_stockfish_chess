@@ -111,6 +111,27 @@ export class ChessBoard {
                         // Highlight this square as selected after a small delay
                         setTimeout(() => this._showLegalMoves(sq), 0);
                     });
+                    // Touch drag support (mobile Safari)
+                    pieceEl.addEventListener('touchstart', (e) => {
+                        if (!this.enabled) return;
+                        this._touchDragFrom = sq;
+                        this._showLegalMoves(sq);
+                    }, { passive: true });
+                    pieceEl.addEventListener('touchend', (e) => {
+                        if (!this.enabled || !this._touchDragFrom) return;
+                        const touch = e.changedTouches[0];
+                        const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const targetCell = targetEl?.closest?.('[data-square]');
+                        if (targetCell) {
+                            const targetSq = targetCell.dataset.square;
+                            if (this._touchDragFrom !== targetSq) {
+                                this.selectedSquare = null;
+                                this.legalMoves = [];
+                                this.onMoveCallback({ from: this._touchDragFrom, to: targetSq });
+                            }
+                        }
+                        this._touchDragFrom = null;
+                    });
                     cell.appendChild(pieceEl);
 
                     // Highlight king in check

@@ -336,3 +336,64 @@
     background: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
 }
+
+/* === Floating Minimize Button === */
+.chess-floating-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--SmartThemeBlurTintColor, #1a1a2e);
+    border: 1px solid var(--SmartThemeBorderColor, #333);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #ccc);
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chess-floating-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.chess-floating-btn:active {
+    transform: scale(0.95);
+}
+
+/* === Mobile Responsive === */
+@media (max-width: 600px) {
+    .chess-extension-panel {
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-height: 75vh;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .chess-board-grid {
+        width: calc(100vw - 40px);
+        height: calc(100vw - 40px);
+        max-width: 344px;
+        max-height: 344px;
+    }
+
+    .chess-piece {
+        font-size: clamp(24px, 10vw, 38px);
+    }
+
+    .chess-floating-btn {
+        bottom: 70px;
+        right: 12px;
+    }
+}

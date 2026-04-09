@@ -179,7 +179,7 @@ function createPanel() {
         <div class="chess-panel-header" id="chess-panel-header">
             <span class="chess-panel-title">♟ Chess</span>
             <div class="chess-panel-controls">
-                <button id="chess-minimize-btn" class="chess-icon-btn" title="Minimize">−</button>
+                <button id="chess-minimize-btn" class="chess-icon-btn" title="Minimize to floating button">−</button>
                 <button id="chess-close-btn" class="chess-icon-btn" title="Close">✕</button>
             </div>
         </div>
@@ -204,15 +204,15 @@ function createPanel() {
 
     document.body.appendChild(panel);
 
+    // Create floating minimize button
+    createFloatingButton();
+
     // Make panel draggable
     makeDraggable(panel, document.getElementById('chess-panel-header'));
 
     // Button handlers
     document.getElementById('chess-close-btn').addEventListener('click', togglePanel);
-    document.getElementById('chess-minimize-btn').addEventListener('click', () => {
-        const body = document.getElementById('chess-panel-body');
-        body.style.display = body.style.display === 'none' ? '' : 'none';
-    });
+    document.getElementById('chess-minimize-btn').addEventListener('click', minimizeToFloat);
     document.getElementById('chess-new-game-btn').addEventListener('click', startNewGame);
     document.getElementById('chess-flip-btn').addEventListener('click', flipBoard);
     document.getElementById('chess-takeback-btn').addEventListener('click', takeBack);
@@ -222,6 +222,32 @@ function createPanel() {
     // Initialize chessboard
     board = new ChessBoard('chess-board-container', handleBoardEvent);
     board.init();
+}
+
+function createFloatingButton() {
+    if (document.getElementById('chess-floating-btn')) return;
+    const btn = document.createElement('div');
+    btn.id = 'chess-floating-btn';
+    btn.className = 'chess-floating-btn';
+    btn.title = 'Restore Chess Panel';
+    btn.textContent = '♟';
+    btn.style.display = 'none';
+    btn.addEventListener('click', restoreFromFloat);
+    document.body.appendChild(btn);
+}
+
+function minimizeToFloat() {
+    const panel = document.getElementById('chess-extension-panel');
+    const floatBtn = document.getElementById('chess-floating-btn');
+    if (panel) panel.style.display = 'none';
+    if (floatBtn) floatBtn.style.display = '';
+}
+
+function restoreFromFloat() {
+    const panel = document.getElementById('chess-extension-panel');
+    const floatBtn = document.getElementById('chess-floating-btn');
+    if (panel) panel.style.display = '';
+    if (floatBtn) floatBtn.style.display = 'none';
 }
 
 function makeDraggable(el, handle) {
@@ -249,10 +275,37 @@ function makeDraggable(el, handle) {
         isDragging = false;
         el.style.transition = '';
     });
+
+    // Touch support for mobile
+    handle.addEventListener('touchstart', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        const touch = e.touches[0];
+        isDragging = true;
+        offsetX = touch.clientX - el.offsetLeft;
+        offsetY = touch.clientY - el.offsetTop;
+        el.style.transition = 'none';
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const x = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, touch.clientX - offsetX));
+        const y = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, touch.clientY - offsetY));
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+        isDragging = false;
+        el.style.transition = '';
+    });
 }
 
 function togglePanel() {
     const panel = document.getElementById('chess-extension-panel');
+    const floatBtn = document.getElementById('chess-floating-btn');
     if (!panel) {
         createPanel();
         panelOpen = true;
@@ -262,6 +315,8 @@ function togglePanel() {
 
     panelOpen = !panelOpen;
     panel.style.display = panelOpen ? '' : 'none';
+    // Hide floating button when panel is fully closed
+    if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
 
     if (panelOpen && !gameActive) {
         startNewGame();
