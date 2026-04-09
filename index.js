@@ -323,10 +323,14 @@ async function togglePanel() {
                 toastr.error('Failed to create chess panel');
                 return;
             }
-            applyMobilePosition(createdPanel);
             panelOpen = true;
+            // Initial positioning (content not fully rendered yet)
+            applyMobilePosition(createdPanel);
             if (!gameActive) {
-                startNewGame().catch(err => {
+                startNewGame().then(() => {
+                    // Reposition after board has fully rendered
+                    requestAnimationFrame(() => applyMobilePosition(createdPanel));
+                }).catch(err => {
                     console.error('[Chess Extension] startNewGame failed:', err);
                     toastr.error('Chess engine failed to start. Try clicking New Game.');
                 });
