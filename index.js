@@ -22,6 +22,7 @@ const defaultSettings = Object.freeze({
     moveDelay: 800,
     showMoveInChat: true,
     boardTheme: 'default',
+    boardSize: 'medium', // 'small', 'medium', 'large'
 });
 
 // --- State ---
@@ -224,6 +225,33 @@ function createPanel() {
     // Initialize chessboard
     board = new ChessBoard('chess-board-container', handleBoardEvent);
     board.init();
+
+    // Apply saved board size (desktop only)
+    applyBoardSize(getSettings().boardSize);
+}
+
+const BOARD_SIZE_PRESETS = {
+    small:  { panelWidth: 320, boardSize: 284, pieceSize: 32 },
+    medium: { panelWidth: 380, boardSize: 344, pieceSize: 38 },
+    large:  { panelWidth: 480, boardSize: 440, pieceSize: 46 },
+};
+
+function applyBoardSize(size) {
+    // Only apply on desktop — mobile uses its own responsive sizing
+    if (window.innerWidth <= 600) return;
+
+    const preset = BOARD_SIZE_PRESETS[size] || BOARD_SIZE_PRESETS.medium;
+    const panel = document.getElementById('chess-extension-panel');
+    const boardGrid = panel?.querySelector('.chess-board-grid');
+
+    if (panel) {
+        panel.style.width = preset.panelWidth + 'px';
+        panel.style.setProperty('--chess-piece-size', preset.pieceSize + 'px');
+    }
+    if (boardGrid) {
+        boardGrid.style.width = preset.boardSize + 'px';
+        boardGrid.style.height = preset.boardSize + 'px';
+    }
 }
 
 function createFloatingButton() {
@@ -1054,6 +1082,14 @@ async function createSettingsPanel() {
                         Show moves in chat
                     </label>
                 </div>
+                <div class="chess-settings-row">
+                    <label for="chess_board_size">Board size (desktop):</label>
+                    <select id="chess_board_size">
+                        <option value="small" ${settings.boardSize === 'small' ? 'selected' : ''}>Small</option>
+                        <option value="medium" ${settings.boardSize === 'medium' ? 'selected' : ''}>Medium</option>
+                        <option value="large" ${settings.boardSize === 'large' ? 'selected' : ''}>Large</option>
+                    </select>
+                </div>
                 <hr />
                 <div class="chess-settings-row">
                     <button id="chess_open_panel_btn" class="menu_button">Open Chess Panel</button>
@@ -1102,6 +1138,12 @@ async function createSettingsPanel() {
     jQuery('#chess_show_move_chat').on('change', function () {
         getSettings().showMoveInChat = this.checked;
         saveSettings();
+    });
+
+    jQuery('#chess_board_size').on('change', function () {
+        getSettings().boardSize = this.value;
+        saveSettings();
+        applyBoardSize(this.value);
     });
 
     jQuery('#chess_open_panel_btn').on('click', () => {

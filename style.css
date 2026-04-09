@@ -159,7 +159,7 @@
 
 /* Pieces */
 .chess-piece {
-    font-size: 38px;
+    font-size: var(--chess-piece-size, 38px);
     line-height: 1;
     cursor: grab;
     z-index: 1;
