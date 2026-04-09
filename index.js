@@ -151,6 +151,7 @@ function formatAlgebraic(moveObj) {
 function isKeyMoment(moveObj, chessGame) {
     if (!moveObj) return false;
     if (moveObj.captured) return true;
+    if (moveObj.san && (moveObj.san.includes('+') || moveObj.san.includes('#'))) return true;
     if (chessGame.inCheck()) return true;
     if (chessGame.isCheckmate() || chessGame.isStalemate() || chessGame.isDraw()) return true;
     if (engine && engine.lastEval) {
@@ -713,7 +714,7 @@ async function engineMove(playerMove) {
 
             // Trigger LLM based on verbosity
             const shouldChat = settings.chatVerbosity === 'every' ||
-                (settings.chatVerbosity === 'key' && isKeyMoment(move, game));
+                (settings.chatVerbosity === 'key' && (isKeyMoment(playerMove, game) || isKeyMoment(move, game)));
 
             if (shouldChat) {
                 await triggerLLMResponse(move);
