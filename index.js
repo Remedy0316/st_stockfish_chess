@@ -172,6 +172,8 @@ function detectExtensionPath() {
 function createPanel() {
     if (document.getElementById('chess-extension-panel')) return;
 
+    console.log('[Chess Extension] Creating panel');
+
     const panel = document.createElement('div');
     panel.id = 'chess-extension-panel';
     panel.className = 'chess-extension-panel';
@@ -303,24 +305,38 @@ function makeDraggable(el, handle) {
     });
 }
 
-function togglePanel() {
-    const panel = document.getElementById('chess-extension-panel');
-    const floatBtn = document.getElementById('chess-floating-btn');
-    if (!panel) {
-        createPanel();
-        panelOpen = true;
-        if (!gameActive) startNewGame();
-        return;
-    }
+async function togglePanel() {
+    try {
+        const panel = document.getElementById('chess-extension-panel');
+        const floatBtn = document.getElementById('chess-floating-btn');
+        if (!panel) {
+            createPanel();
+            panelOpen = true;
+            if (!gameActive) {
+                // Don't let engine init failure prevent panel from showing
+                startNewGame().catch(err => {
+                    console.error('[Chess Extension] startNewGame failed:', err);
+                    toastr.error('Chess engine failed to start. Try clicking New Game.');
+                });
+            }
+            return;
+        }
 
-    panelOpen = !panelOpen;
-    panel.style.display = panelOpen ? '' : 'none';
-    // Hide floating button when panel is fully closed
-    if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
-    if (!panelOpen) clearChessPrompt();
+        panelOpen = !panelOpen;
+        panel.style.display = panelOpen ? '' : 'none';
+        // Hide floating button when panel is fully closed
+        if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
+        if (!panelOpen) clearChessPrompt();
 
-    if (panelOpen && !gameActive) {
-        startNewGame();
+        if (panelOpen && !gameActive) {
+            startNewGame().catch(err => {
+                console.error('[Chess Extension] startNewGame failed:', err);
+                toastr.error('Chess engine failed to start. Try clicking New Game.');
+            });
+        }
+    } catch (err) {
+        console.error('[Chess Extension] togglePanel error:', err);
+        toastr.error('Chess panel error: ' + err.message);
     }
 }
 
@@ -1036,8 +1052,10 @@ jQuery(async () => {
     // Find the extensions menu and add our button
     jQuery('#extensionsMenu').append(chessButton);
 
-    chessButton.on('click', () => {
-        togglePanel();
+    chessButton.on('click', function (e) {
+        e.stopPropagation();
+        // Small delay to let mobile menu close animation finish
+        setTimeout(() => togglePanel(), 50);
     });
 
     // Listen for chat changes to restore game state
