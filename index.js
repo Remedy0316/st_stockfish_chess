@@ -22,7 +22,7 @@ const defaultSettings = Object.freeze({
     moveDelay: 800,
     showMoveInChat: true,
     boardTheme: 'default',
-    boardSize: 'medium', // 'small', 'medium', 'large'
+    boardSize: 'medium', // 'medium', 'large', 'xlarge'
 });
 
 // --- State ---
@@ -231,9 +231,9 @@ function createPanel() {
 }
 
 const BOARD_SIZE_PRESETS = {
-    small:  { panelWidth: 320, boardSize: 284, pieceSize: 32 },
     medium: { panelWidth: 380, boardSize: 344, pieceSize: 38 },
     large:  { panelWidth: 480, boardSize: 440, pieceSize: 46 },
+    xlarge: { panelWidth: 580, boardSize: 536, pieceSize: 56 },
 };
 
 function applyBoardSize(size) {
@@ -1085,9 +1085,9 @@ async function createSettingsPanel() {
                 <div class="chess-settings-row">
                     <label for="chess_board_size">Board size (desktop):</label>
                     <select id="chess_board_size">
-                        <option value="small" ${settings.boardSize === 'small' ? 'selected' : ''}>Small</option>
                         <option value="medium" ${settings.boardSize === 'medium' ? 'selected' : ''}>Medium</option>
                         <option value="large" ${settings.boardSize === 'large' ? 'selected' : ''}>Large</option>
+                        <option value="xlarge" ${settings.boardSize === 'xlarge' ? 'selected' : ''}>Extra Large</option>
                     </select>
                 </div>
                 <hr />
