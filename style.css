@@ -379,11 +379,9 @@
 /* === Mobile Responsive === */
 @media (max-width: 600px) {
     .chess-extension-panel {
-        top: auto !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
+        left: 0;
+        right: 0;
+        width: 100%;
         max-height: 75vh;
         border-radius: 12px 12px 0 0;
     }

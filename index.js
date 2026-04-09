@@ -359,19 +359,28 @@ function applyMobilePosition(panel) {
     if (window.innerWidth > 600) return;
 
     const maxH = Math.round(window.innerHeight * 0.75);
-    // Get the offset between viewport and the panel's offsetParent
-    // to compensate for any ancestor transforms
-    const testTop = panel.getBoundingClientRect().top - (parseFloat(panel.style.top) || 0);
 
-    panel.style.position = 'fixed';
-    panel.style.left = '0px';
-    panel.style.right = '0px';
-    panel.style.width = '100%';
-    panel.style.maxHeight = maxH + 'px';
-    panel.style.bottom = 'auto';
-    // Place panel at the bottom of the actual viewport by compensating for transform offset
-    const desiredTop = window.innerHeight - Math.min(panel.offsetHeight, maxH);
-    panel.style.top = (desiredTop - testTop) + 'px';
+    // Temporarily reset top to 0 to measure transform offset
+    panel.style.setProperty('position', 'fixed', 'important');
+    panel.style.setProperty('top', '0px', 'important');
+    panel.style.setProperty('bottom', 'auto', 'important');
+    panel.style.setProperty('left', '0px', 'important');
+    panel.style.setProperty('right', '0px', 'important');
+    panel.style.setProperty('width', '100%', 'important');
+    panel.style.setProperty('max-height', maxH + 'px', 'important');
+    panel.style.setProperty('display', 'flex', 'important');
+    panel.style.setProperty('visibility', 'visible', 'important');
+
+    // Measure the transform offset: how far is CSS top:0 from the actual viewport top?
+    const transformOffset = panel.getBoundingClientRect().top;
+
+    // Place panel at the bottom of the visible viewport
+    const panelHeight = Math.min(panel.scrollHeight, maxH);
+    const desiredViewportTop = window.innerHeight - panelHeight;
+    const cssTop = desiredViewportTop - transformOffset;
+
+    panel.style.setProperty('top', cssTop + 'px', 'important');
+    console.log('[Chess Extension] Mobile position: transformOffset=' + transformOffset + ' cssTop=' + cssTop + ' panelH=' + panelHeight + ' viewport=' + window.innerHeight);
 }
 
 // --- Game Logic ---
