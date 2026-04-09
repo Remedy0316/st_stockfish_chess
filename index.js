@@ -317,6 +317,7 @@ function togglePanel() {
     panel.style.display = panelOpen ? '' : 'none';
     // Hide floating button when panel is fully closed
     if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
+    if (!panelOpen) clearChessPrompt();
 
     if (panelOpen && !gameActive) {
         startNewGame();
@@ -557,8 +558,9 @@ async function handleGameOver() {
         await triggerLLMResponse(null, true);
     }
 
-    // Set gameActive false AFTER generation so the interceptor can inject chess context
+    // Set gameActive false AFTER generation so the prompt injection has chess context
     gameActive = false;
+    clearChessPrompt();
 }
 
 async function takeBack() {
@@ -610,8 +612,9 @@ async function resignGame() {
         await triggerLLMResponse(null, true, 'resigned');
     }
 
-    // Set gameActive false AFTER generation so the interceptor can inject chess context
+    // Set gameActive false AFTER generation so the prompt injection has chess context
     gameActive = false;
+    clearChessPrompt();
 }
 
 function flipBoard() {
@@ -793,8 +796,9 @@ async function triggerLLMResponse(lastMove, isGameOver = false, resignType = nul
     }
 
     try {
-        // Use normal generation so the response streams naturally in the UI.
-        // The generate_interceptor injects chess game state into the prompt automatically.
+        // Inject chess game state as a system message via setExtensionPrompt
+        updateChessPrompt(lastMove, isGameOver);
+
         await ctx.generate('normal');
     } catch (err) {
         console.error('[Chess Extension] Failed to trigger LLM response:', err);
@@ -842,31 +846,31 @@ async function sendMoveToChat(move, source) {
     }
 }
 
-// --- Prompt Interceptor ---
+// --- Prompt Injection ---
 
-globalThis.chessExtensionInterceptor = async function (chat, contextSize, abort, type) {
-    if (!game || !gameActive) return;
-
-    const chessContext = buildChessContext(
-        moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null,
-        game.isGameOver(),
-    );
-
-    if (chessContext) {
-        // Inject as a system note before the last message
-        const systemNote = {
-            is_user: false,
-            name: 'Chess Game',
-            mes: chessContext,
-            is_system: true,
-            role: 'system',
-            extra: { type: 'chess_context' },
-        };
-        // Insert near the end so it's in context
-        const insertIdx = Math.max(0, chat.length - 1);
-        chat.splice(insertIdx, 0, systemNote);
+function updateChessPrompt(lastMove, isGameOver) {
+    const ctx = SillyTavern.getContext();
+    if (!game || !gameActive) {
+        ctx.setExtensionPrompt(MODULE_NAME, '', 1, 0, true, 0);
+        return;
     }
-};
+
+    const chessContext = buildChessContext(lastMove, isGameOver);
+    if (chessContext) {
+        // Inject as a system message at depth 1 (before the last message)
+        // Position 1 = IN_CHAT, Role 0 = SYSTEM
+        ctx.setExtensionPrompt(MODULE_NAME, chessContext, 1, 1, true, 0);
+    }
+}
+
+function clearChessPrompt() {
+    try {
+        const ctx = SillyTavern.getContext();
+        ctx.setExtensionPrompt(MODULE_NAME, '', 1, 0, true, 0);
+    } catch (e) {
+        // Context may not be available yet
+    }
+}
 
 // --- Settings Panel ---
 
