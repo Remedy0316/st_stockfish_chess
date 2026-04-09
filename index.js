@@ -416,7 +416,10 @@ async function togglePanel() {
 
         panelOpen = !panelOpen;
         panel.style.display = panelOpen ? '' : 'none';
-        if (panelOpen) applyMobilePosition(panel);
+        if (panelOpen) {
+            applyMobilePosition(panel);
+            applyBoardSize(getSettings().boardSize);
+        }
         // Hide floating button when panel is fully closed
         if (floatBtn && !panelOpen) floatBtn.style.display = 'none';
         if (!panelOpen) clearChessPrompt();
@@ -505,6 +508,7 @@ async function startNewGame() {
         board._buildBoard();
         board.setEnabled(true);
         board.render(game);
+        applyBoardSize(getSettings().boardSize);
     }
 
     // Initialize engine
@@ -782,6 +786,7 @@ function flipBoard() {
     if (!board) return;
     board.flip();
     if (game) board.render(game);
+    applyBoardSize(getSettings().boardSize);
 }
 
 async function copyPGN() {
