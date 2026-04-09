@@ -60,6 +60,14 @@ export class ChessBoard {
                 }
 
                 cell.addEventListener('click', () => this._onSquareClick(sq));
+                cell.addEventListener('touchend', (e) => {
+                    // If this touch lands directly on the cell (not on a piece),
+                    // handle it as a square click for tap-to-move on mobile
+                    if (!this.enabled) return;
+                    if (e.target.closest('.chess-piece')) return; // piece handles its own touch
+                    e.preventDefault();
+                    this._onSquareClick(sq);
+                });
                 cell.addEventListener('dragover', (e) => e.preventDefault());
                 cell.addEventListener('drop', (e) => this._onDrop(e, sq));
 
@@ -115,6 +123,16 @@ export class ChessBoard {
                     pieceEl.addEventListener('touchstart', (e) => {
                         if (!this.enabled) return;
                         e.preventDefault(); // Prevent text selection and delayed click
+
+                        // If a piece is already selected, delegate to the click logic
+                        // so tap-to-capture and tap-to-deselect work correctly
+                        if (this.selectedSquare) {
+                            this._onSquareClick(sq);
+                            // Only start a new drag if this piece ended up selected
+                            this._touchDragFrom = this.selectedSquare === sq ? sq : null;
+                            return;
+                        }
+
                         this._touchDragFrom = sq;
                         this._touchMoved = false;
                         this._showLegalMoves(sq);
