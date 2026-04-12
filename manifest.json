@@ -6,9 +6,9 @@
     "dependencies": [],
     "js": "index.js",
     "css": "style.css",
-    "author": "st_stockfish_chess",
+    "author": "Remedy",
     "version": "1.0.0",
-    "homePage": "https://github.com/user/st_stockfish_chess",
+    "homePage": "https://github.com/Remedy0316/st_stockfish_chess",
     "auto_update": true,
     "hooks": {
         "activate": "onActivate",
